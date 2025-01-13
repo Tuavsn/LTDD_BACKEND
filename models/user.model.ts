@@ -2,11 +2,18 @@ import bcrypt from 'bcryptjs';
 import { model, Schema } from "mongoose";
 import { Role } from '../configs/enum';
 
-const userSchema = new Schema ({
+const userSchema = new Schema({
     email: {
         type: String,
         required: [true, "Email is required"],
         unique: [true, "Email already exists"],
+        trim: true,
+        lowercase: true,
+    },
+    phone: {
+        type: String,
+        required: [true, "Phone is required"],
+        unique: [true, "Phone already exists"],
         trim: true,
         lowercase: true,
     },
@@ -34,11 +41,11 @@ const userSchema = new Schema ({
     },
     otp: {
         type: String,
-        required: false 
+        required: false
     },
-    otpExpiration: { 
-        type: Date, 
-        required: false 
+    otpExpiration: {
+        type: Date,
+        required: false
     },
     isVerified: {
         type: Boolean,

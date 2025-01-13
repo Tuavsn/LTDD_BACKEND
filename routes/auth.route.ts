@@ -20,7 +20,7 @@ authRouter.post('/verify-otp', (req: Request, res: Response) => {
 });
 
 authRouter.post('/resend-otp', (req: Request, res: Response) => {
-    AuthController.forgotPassword(req, res);
+    AuthController.resendOtp(req, res);
 });
 
 export default authRouter;

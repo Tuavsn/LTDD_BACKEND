@@ -6,6 +6,7 @@ import User from "../models/user.model";
 import { GlobalConstant } from '../configs/constant';
 import transporter from '../configs/mail';
 import { IUser } from '../configs/types';
+import { Role } from '../configs/enum';
 
 class AuthController {
     /**
@@ -18,33 +19,34 @@ class AuthController {
         const { email, password } = req.body;
 
         try {
-            // // Tìm người dùng trong cơ sở dữ liệu
-            // const user = await User.findOne({ email });
-            // if (!user) {
-            //     return res.status(404).json({ message: 'User not found' });
-            // }
+            // Tìm người dùng trong cơ sở dữ liệu
+            const user = await User.findOne({ email });
+            if (!user) {
+                return res.status(404).json({ message: 'User not found' });
+            }
 
-            // // Kiểm tra mật khẩu
-            // const isPasswordValid = await bcrypt.compare(password, user.password);
-            // if (!isPasswordValid) {
-            //     return res.status(401).json({ message: 'Invalid credentials' });
-            // }
+            // Kiểm tra mật khẩu
+            const isPasswordValid = await bcrypt.compare(password, user.password);
+            if (!isPasswordValid) {
+                return res.status(401).json({ message: 'Invalid credentials' });
+            }
 
-            // // Kiểm tra trạng thái tài khoản (nếu có OTP tồn tại, yêu cầu xác minh)
-            // if (user.otp) {
-            //     return res.status(403).json({ message: 'Please verify your account using the OTP sent to your email.' });
-            // }
+            // Kiểm tra trạng thái tài khoản (nếu có OTP tồn tại, yêu cầu xác minh)
+            if (user.otp && user.otpExpiration && new Date() < user.otpExpiration && !user.isVerified) {
+                return res.status(403).json({
+                    message: 'Please verify your account using the OTP sent to your email.',
+                    suggestEnterOtp: true
+                });
+            }
 
-            // // Tạo JWT token cho phiên đăng nhập
-            // const tokenPayload = { id: user._id, email: user.email, role: user.role };
-            // const token = jwt.sign(tokenPayload, GlobalConstant.JWT_SECRET, { expiresIn: GlobalConstant.JWT_EXPIRE });
+            // Tạo JWT token cho phiên đăng nhập
+            const tokenPayload = { id: user._id, email: user.email, role: user.role };
+            const token = jwt.sign(tokenPayload, GlobalConstant.JWT_SECRET, { expiresIn: GlobalConstant.JWT_EXPIRE });
 
-            console.log(req.body)
             res.status(200).json({
                 message: 'Login successful',
-                success: true,
-                // token,
-                // user: { email: user.email, fullname: user.fullname, role: user.role, avatar: user.avatar },
+                token,
+                user: { email: user.email, fullname: user.fullname, role: user.role, avatar: user.avatar },
             });
         } catch (error) {
             console.error('Login error:', error);
@@ -59,11 +61,12 @@ class AuthController {
      * @returns 
      */
     static async register(req: Request, res: Response) {
-        const { email, fullname, role, password } = req.body;
+        const { email, phone, fullname, password }:
+            { email: string, phone: string, fullname: string, role: string, password: string } = req.body;
 
         // Kiểm tra người dùng đã tồn tại
         const existingUser = await User.findOne({ email });
-        if (existingUser) {
+        if (existingUser && existingUser.isVerified) {
             return res.status(400).json({ message: 'User already exists' });
         }
 
@@ -72,26 +75,41 @@ class AuthController {
 
         // Lưu thông tin người dùng cùng với OTP và thời gian hết hạn
         const otpExpiration = new Date(Date.now() + 15 * 60 * 1000); // OTP có hiệu lực trong 15 phút
+        const hashedPassword = await bcrypt.hash(password, 10);
 
-        const newUser = await User.create({
-            email, fullname, role, password, otp, otpExpiration
-        });
+        if (existingUser) {
+            await User.findOneAndUpdate(
+                { email: existingUser.email },
+                { $set: { password: hashedPassword, phone, fullname } },
+                { new: true }
+            );
+            console.log('1')
+        } else {
+            await User.create({
+                email, phone, fullname, role: Role.USER, password, otp, otpExpiration
+            });
+            console.log('2')
+        }
 
-        // Gửi email chứa mã OTP
-        const mailOptions = {
-            from: process.env.SMTP_USER,
-            to: email,
-            subject: 'OTP for Account Registration',
-            html: `<p>Your OTP code is: ${otp}</p><p>This OTP will expire in 15 minutes.</p>`,
-        };
+        if (!existingUser || (existingUser.otpExpiration && existingUser.otpExpiration < new Date())) {
+            // Gửi email chứa mã OTP
+            console.log('3')
+            const mailOptions = {
+                from: process.env.SMTP_USER,
+                to: email,
+                subject: 'OTP for Account Registration',
+                html: `<p>Your OTP code is: ${otp}</p><p>This OTP will expire in 15 minutes.</p>`,
+            };
 
-        transporter.sendMail(mailOptions, (err: any, info: any) => {
-            if (err) {
-                console.error(err);
-                return res.status(500).json({ message: 'Failed to send OTP email' });
-            }
-            res.status(201).json({ message: 'User registered successfully. Check your email for the OTP.' });
-        });
+            transporter.sendMail(mailOptions, (err: any, info: any) => {
+                if (err) {
+                    console.error(err);
+                    return res.status(500).json({ message: 'Failed to send OTP email' });
+                }
+                return res.status(201).json({ message: 'User registered successfully. Check your email for the OTP.' });
+            });
+        }
+        return res.status(201).json({ message: 'User registered successfully. Check your email for the OTP.' });
     }
 
     /**
@@ -109,6 +127,8 @@ class AuthController {
             return res.status(404).json({ message: 'User not found' });
         }
 
+        console.log(otp, user.otp, user.otpExpiration)
+
         // Kiểm tra OTP và thời gian hết hạn
         if (user.otp !== otp) {
             return res.status(400).json({ message: 'Invalid OTP' });
@@ -118,13 +138,14 @@ class AuthController {
             return res.status(400).json({
                 message: 'OTP has expired',
                 suggestResendOtp: true, // Thêm thông báo đề xuất gửi lại OTP
+
             });
         }
 
         // Hoàn tất đăng ký: Xóa OTP và hoàn tất quá trình đăng ký
         await User.findOneAndUpdate(
             { email: user.email },
-            { $set: { otp: null, otpExpiration: null } },
+            { $set: { otp: null, otpExpiration: null, isVerified: true } },
             { new: true } // Trả về document đã cập nhật
         );
 
@@ -192,6 +213,10 @@ class AuthController {
         const user = await User.findOne({ email });
         if (!user) {
             return res.status(404).json({ message: 'User not found' });
+        }
+
+        if (!user.isVerified) {
+            return res.status(403).json({ message: 'Please verify your account first.' });
         }
 
         // Tạo mã OTP ngẫu nhiên
