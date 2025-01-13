@@ -9,14 +9,24 @@ const app: Express = express();
 
 connectDB();
 
-app.use(cors());
+app.use(cors({
+  origin: '0.0.0.0',
+  credentials: true,
+}));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-app.use('/api/v1/', apiRouter);
+app.use('/api/v1', apiRouter);
+
+const middle = (req: Request, res: Response, next: any) => {
+  console.log('Middleware:', req.url);
+  next();
+}
+
+app.use(middle);
 
 
 app.get('/', (req: Request, res: Response) => {
-  res.json({ status: '>>> API is running'});
+  res.json({ status: '>>> API is running' });
 })
 
 

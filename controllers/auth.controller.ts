@@ -18,31 +18,33 @@ class AuthController {
         const { email, password } = req.body;
 
         try {
-            // Tìm người dùng trong cơ sở dữ liệu
-            const user = await User.findOne({ email });
-            if (!user) {
-                return res.status(404).json({ message: 'User not found' });
-            }
+            // // Tìm người dùng trong cơ sở dữ liệu
+            // const user = await User.findOne({ email });
+            // if (!user) {
+            //     return res.status(404).json({ message: 'User not found' });
+            // }
 
-            // Kiểm tra mật khẩu
-            const isPasswordValid = await bcrypt.compare(password, user.password);
-            if (!isPasswordValid) {
-                return res.status(401).json({ message: 'Invalid credentials' });
-            }
+            // // Kiểm tra mật khẩu
+            // const isPasswordValid = await bcrypt.compare(password, user.password);
+            // if (!isPasswordValid) {
+            //     return res.status(401).json({ message: 'Invalid credentials' });
+            // }
 
-            // Kiểm tra trạng thái tài khoản (nếu có OTP tồn tại, yêu cầu xác minh)
-            if (user.otp) {
-                return res.status(403).json({ message: 'Please verify your account using the OTP sent to your email.' });
-            }
+            // // Kiểm tra trạng thái tài khoản (nếu có OTP tồn tại, yêu cầu xác minh)
+            // if (user.otp) {
+            //     return res.status(403).json({ message: 'Please verify your account using the OTP sent to your email.' });
+            // }
 
-            // Tạo JWT token cho phiên đăng nhập
-            const tokenPayload = { id: user._id, email: user.email, role: user.role };
-            const token = jwt.sign(tokenPayload, GlobalConstant.JWT_SECRET, { expiresIn: GlobalConstant.JWT_EXPIRE });
+            // // Tạo JWT token cho phiên đăng nhập
+            // const tokenPayload = { id: user._id, email: user.email, role: user.role };
+            // const token = jwt.sign(tokenPayload, GlobalConstant.JWT_SECRET, { expiresIn: GlobalConstant.JWT_EXPIRE });
 
+            console.log(req.body)
             res.status(200).json({
                 message: 'Login successful',
-                token,
-                user: { email: user.email, fullname: user.fullname, role: user.role, avatar: user.avatar },
+                success: true,
+                // token,
+                // user: { email: user.email, fullname: user.fullname, role: user.role, avatar: user.avatar },
             });
         } catch (error) {
             console.error('Login error:', error);
@@ -222,13 +224,13 @@ class AuthController {
 
     static async resetPassword(req: Request, res: Response) {
         const { email, newPassword } = req.body;
-    
+
         // Tìm người dùng
         const user = await User.findOne({ email });
         if (!user) {
             return res.status(404).json({ message: 'User not found' });
         }
-    
+
         // Kiểm tra trạng thái xác thực OTP
         if (user.otp) {
             return res.status(403).json({ message: 'OTP not verified. Please verify OTP first.' });
@@ -237,20 +239,20 @@ class AuthController {
         if (!user.otpExpiration || new Date() > user.otpExpiration) {
             return res.status(403).json({ message: 'OTP has expired' });
         }
-    
+
         // Hash mật khẩu mới
         const hashedPassword = await bcrypt.hash(newPassword, 10);
-    
+
         // Cập nhật mật khẩu và xóa trạng thái OTP
-         await User.findOneAndUpdate(
+        await User.findOneAndUpdate(
             { email: user.email },
-            { $set: { password: hashedPassword ,otp: null, otpExpiration: null } },
+            { $set: { password: hashedPassword, otp: null, otpExpiration: null } },
             { new: true } // Trả về document đã cập nhật
         );
-    
+
         res.status(200).json({ message: 'Password reset successful' });
     }
-    
+
 }
 
 export default AuthController;

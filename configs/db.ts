@@ -11,6 +11,6 @@ export const connectDB = async () => {
         .catch((err) => {
             Logger.error(`Error connecting to MongoDB with URL: ${GlobalConstant.MONGO_DB_URL}`);
             Logger.error(err);
-            process.exit();
+            // process.exit();
         })
 }
