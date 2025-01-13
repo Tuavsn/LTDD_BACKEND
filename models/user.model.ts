@@ -40,6 +40,10 @@ const userSchema = new Schema ({
         type: Date, 
         required: false 
     },
+    isVerified: {
+        type: Boolean,
+        default: false
+    }
 }, { timestamps: true });
 
 userSchema.pre("save", function (next) {

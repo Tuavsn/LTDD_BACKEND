@@ -9,6 +9,48 @@ import { IUser } from '../configs/types';
 
 class AuthController {
     /**
+     * User Login
+     * @param req 
+     * @param res 
+     * @returns 
+     */
+    static async login(req: Request, res: Response) {
+        const { email, password } = req.body;
+
+        try {
+            // Tìm người dùng trong cơ sở dữ liệu
+            const user = await User.findOne({ email });
+            if (!user) {
+                return res.status(404).json({ message: 'User not found' });
+            }
+
+            // Kiểm tra mật khẩu
+            const isPasswordValid = await bcrypt.compare(password, user.password);
+            if (!isPasswordValid) {
+                return res.status(401).json({ message: 'Invalid credentials' });
+            }
+
+            // Kiểm tra trạng thái tài khoản (nếu có OTP tồn tại, yêu cầu xác minh)
+            if (user.otp) {
+                return res.status(403).json({ message: 'Please verify your account using the OTP sent to your email.' });
+            }
+
+            // Tạo JWT token cho phiên đăng nhập
+            const tokenPayload = { id: user._id, email: user.email, role: user.role };
+            const token = jwt.sign(tokenPayload, GlobalConstant.JWT_SECRET, { expiresIn: GlobalConstant.JWT_EXPIRE });
+
+            res.status(200).json({
+                message: 'Login successful',
+                token,
+                user: { email: user.email, fullname: user.fullname, role: user.role, avatar: user.avatar },
+            });
+        } catch (error) {
+            console.error('Login error:', error);
+            res.status(500).json({ message: 'Internal server error' });
+        }
+    }
+
+    /**
      * Create new account
      * @param req 
      * @param res 
@@ -23,16 +65,14 @@ class AuthController {
             return res.status(400).json({ message: 'User already exists' });
         }
 
-        // Hash mật khẩu
-        const hashedPassword = await bcrypt.hash(password, 10);
-
         // Tạo mã OTP ngẫu nhiên
         const otp = crypto.randomInt(100000, 999999).toString(); // Mã OTP gồm 6 chữ số
 
         // Lưu thông tin người dùng cùng với OTP và thời gian hết hạn
         const otpExpiration = new Date(Date.now() + 15 * 60 * 1000); // OTP có hiệu lực trong 15 phút
+
         const newUser = await User.create({
-            email, fullname, role, password: hashedPassword, otp, otpExpiration
+            email, fullname, role, password, otp, otpExpiration
         });
 
         // Gửi email chứa mã OTP
