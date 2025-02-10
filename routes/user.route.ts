@@ -1,11 +1,11 @@
 import express, { Request, Response } from "express";
-import userController from "../controllers/user.controller";
+import { UserController } from "../controllers";
 import { Logger } from "../utils/logger";
 
 const userRouter = express.Router();
 
 userRouter.post("/profile", (req: Request, res: Response) => {
-    userController.updateProfile(req, res);
+    UserController.updateProfile(req, res);
     Logger.warn("Update profile");
 })
 

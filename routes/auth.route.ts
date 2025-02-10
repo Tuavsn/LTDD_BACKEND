@@ -23,4 +23,8 @@ authRouter.post('/resend-otp', (req: Request, res: Response) => {
     AuthController.resendOtp(req, res);
 });
 
+authRouter.post('/reset-password', (req: Request, res: Response) => {
+    AuthController.resetPassword(req, res);
+});
+
 export default authRouter;

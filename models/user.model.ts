@@ -50,7 +50,11 @@ const userSchema = new Schema({
     isVerified: {
         type: Boolean,
         default: false
-    }
+    },
+    pendingEmail: {
+        type: String,
+        required: false
+    },
 }, { timestamps: true });
 
 userSchema.pre("save", function (next) {

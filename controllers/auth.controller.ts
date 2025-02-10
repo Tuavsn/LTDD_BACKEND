@@ -7,6 +7,13 @@ import { GlobalConstant } from '../configs/constant';
 import transporter from '../configs/mail';
 import { IUser } from '../configs/types';
 import { Role } from '../configs/enum';
+import { Types } from 'mongoose';
+
+export type TokenPayload = {
+    id: Types.ObjectId;
+    email: string;
+    role: string;
+}
 
 class AuthController {
     /**
@@ -22,13 +29,13 @@ class AuthController {
             // Tìm người dùng trong cơ sở dữ liệu
             const user = await User.findOne({ email });
             if (!user) {
-                return res.status(404).json({ message: 'User not found' });
+                return res.status(404).json({ message: 'Invalid credentials' });
             }
 
             // Kiểm tra mật khẩu
             const isPasswordValid = await bcrypt.compare(password, user.password);
             if (!isPasswordValid) {
-                return res.status(401).json({ message: 'Invalid credentials' });
+                return res.status(404).json({ message: 'Invalid credentials' });
             }
 
             // Kiểm tra trạng thái tài khoản (nếu có OTP tồn tại, yêu cầu xác minh)
@@ -40,13 +47,20 @@ class AuthController {
             }
 
             // Tạo JWT token cho phiên đăng nhập
-            const tokenPayload = { id: user._id, email: user.email, role: user.role };
+            const tokenPayload = { id: user._id, email: user.email, role: user.role } as TokenPayload;
             const token = jwt.sign(tokenPayload, GlobalConstant.JWT_SECRET, { expiresIn: GlobalConstant.JWT_EXPIRE });
 
             res.status(200).json({
                 message: 'Login successful',
                 token,
-                user: { email: user.email, fullname: user.fullname, role: user.role, avatar: user.avatar },
+                user: {
+                    id: user._id,
+                    email: user.email,
+                    phone: user.phone,
+                    fullname: user.fullname,
+                    role: user.role,
+                    avatar: user.avatar,
+                },
             });
         } catch (error) {
             console.error('Login error:', error);
@@ -64,6 +78,8 @@ class AuthController {
         const { email, phone, fullname, password }:
             { email: string, phone: string, fullname: string, role: string, password: string } = req.body;
 
+        console.log(req.body)
+
         // Kiểm tra người dùng đã tồn tại
         const existingUser = await User.findOne({ email });
         if (existingUser && existingUser.isVerified) {
@@ -75,6 +91,7 @@ class AuthController {
 
         // Lưu thông tin người dùng cùng với OTP và thời gian hết hạn
         const otpExpiration = new Date(Date.now() + 15 * 60 * 1000); // OTP có hiệu lực trong 15 phút
+        console.log(password)
         const hashedPassword = await bcrypt.hash(password, 10);
 
         if (existingUser) {
@@ -119,6 +136,7 @@ class AuthController {
      * @returns 
      */
     static async verifyOtp(req: Request, res: Response) {
+        console.log(req.body)
         const { email, otp } = req.body;
 
         // Tìm người dùng theo email
@@ -126,8 +144,6 @@ class AuthController {
         if (!user) {
             return res.status(404).json({ message: 'User not found' });
         }
-
-        console.log(otp, user.otp, user.otpExpiration)
 
         // Kiểm tra OTP và thời gian hết hạn
         if (user.otp !== otp) {
@@ -140,6 +156,13 @@ class AuthController {
                 suggestResendOtp: true, // Thêm thông báo đề xuất gửi lại OTP
 
             });
+        }
+
+        if (user.isVerified && user.pendingEmail) {
+            await User.findOneAndUpdate(
+                { _id: user.id },
+                { $set: { email: user.pendingEmail, pendingEmail: null } }
+            );
         }
 
         // Hoàn tất đăng ký: Xóa OTP và hoàn tất quá trình đăng ký
