@@ -1,7 +1,7 @@
 import express, { Express, Request, Response } from 'express'
 import dotenv from 'dotenv'
 import cors from 'cors'
-import apiRouter from './routes/api.route';
+import ApiRouter from './routes/api.route';
 import { connectDB } from './configs/db';
 import { Logger } from './utils/logger';
 import { authenticationMiddleware } from './middlewares/authenciation.middlewares';
@@ -36,7 +36,7 @@ const middle = (req: Request, res: Response, next: any) => {
 app.use(middle);
 
 app.use(authenticationMiddleware)
-app.use('/api/v1', apiRouter);
+app.use('/api/v1', ApiRouter);
 
 // test();
 

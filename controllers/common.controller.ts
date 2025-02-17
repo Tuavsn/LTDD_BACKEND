@@ -13,23 +13,15 @@ class crudController {
      * Get All Items
      * @route {GET} /api/v1/{model}
      * @param req 
-     * @param res 
+     * @param res
      * @returns all items
      */
     getAll = async (req: Request, res: Response) => {
         try {
             const existedItem = await this.model.find().lean();
-            res.json(new BaseResponse(
-                200,
-                existedItem,
-                'Get all items success'
-            ));
+            res.status(200).json(existedItem);
         } catch (error: any) {
-            res.json(new BaseResponse(
-                500,
-                null,
-                error
-            ));
+            res.status(500).json({ message: "Internal Server Error" });
             Logger.error(`Error execute getAll with Request: {GET} ${req.url}`);
             Logger.error(error);
         }
@@ -46,11 +38,7 @@ class crudController {
         try {
             const existedItem = await this.model.findById(req.params.id).lean();
             if (!existedItem) {
-                return res.json(new BaseResponse(
-                    404,
-                    null,
-                    'Item not found'
-                ));
+                return res.status(404).json({ message: 'Item not found' });
             }
             res.json(new BaseResponse(
                 200,
@@ -58,11 +46,7 @@ class crudController {
                 'Get by id success'
             ));
         } catch (error: any) {
-            res.json(new BaseResponse(
-                500,
-                null,
-                error
-            ));
+            res.status(500).json({ message: "Internal Server Error" });
             Logger.error(`Error execute getAll with Request: {GET} ${req.url}`);
             Logger.error(error);
         }
@@ -77,23 +61,27 @@ class crudController {
      */
     create = async (req: Request, res: Response) => {
         try {
-            const newItem = await this.model.create(req.body);
+            const isArray = Array.isArray(req.body);
+            const newItems = isArray 
+                ? await this.model.insertMany(req.body) 
+                : await this.model.create(req.body);
             res.json(new BaseResponse(
                 201,
-                newItem,
-                'Create item success'
+                newItems,
+                isArray ? 'Create multiple items success' : 'Create item success'
             ));
         } catch (error: any) {
             res.json(new BaseResponse(
                 500,
                 null,
-                error
+                error.message || 'Internal Server Error'
             ));
-            Logger.error(`Error execute getAll with Request: {POST} ${req.url}`);
-            Logger.error(`Error Request body: ${req.body}`);
+            Logger.error(`Error execute create with Request: {POST} ${req.url}`);
+            Logger.error(`Error Request body: ${JSON.stringify(req.body)}`);
             Logger.error(error);
         }
-    }
+    };
+    
 
     /**
      * Update existed Item
@@ -106,11 +94,7 @@ class crudController {
         try {
             const existedItem = await this.model.findById(req.params.id);
             if (!existedItem) {
-                return res.json(new BaseResponse(
-                    404,
-                    null,
-                    'Item not found'
-                ));
+                return res.status(404).json({ message: 'Item not found' });
             }
             await existedItem.updateOne(req.body);
             res.json(new BaseResponse(
@@ -119,11 +103,7 @@ class crudController {
                 'Update item success'
             ));
         } catch (error: any) {
-            res.json(new BaseResponse(
-                500,
-                null,
-                error
-            ));
+            res.status(500).json({ message: "Internal Server Error" });
             Logger.error(`Error execute getAll with Request: {PUT} ${req.url}`);
             Logger.error(`Error Request body: ${req.body}`);
             Logger.error(error);
@@ -141,24 +121,12 @@ class crudController {
         try {
             const existedItem = await this.model.findById(req.params.id);
             if (!existedItem) {
-                return res.json(new BaseResponse(
-                    404,
-                    null,
-                    'Item not found'
-                ));
+                return res.status(404).json({ message: 'Item not found' });
             }
             await existedItem.deleteOne();
-            res.json(new BaseResponse(
-                200,
-                null,
-                'Item deleted'
-            ));
+            res.status(200).json({ message: 'Item deleted' });
         } catch (error: any) {
-            res.json(new BaseResponse(
-                500,
-                null,
-                error
-            ));
+            res.status(500).json({ message: "Internal Server Error" });
             Logger.error(`Error execute getAll with Request: {DELETE} ${req.url}`);
             Logger.error(error);
         }
