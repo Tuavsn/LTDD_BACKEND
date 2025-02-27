@@ -7,6 +7,7 @@ import { Logger } from './utils/logger';
 import { authenticationMiddleware } from './middlewares/authenciation.middlewares';
 
 import { v2 as cloudinary } from 'cloudinary';
+import { cleanCloudinaryImageWorker } from './worker/CleanCloudinaryImage';
 
 // Configuration
 cloudinary.config({
@@ -44,6 +45,7 @@ app.get('/', (req: Request, res: Response) => {
   res.json({ status: '>>> API is running' });
 })
 
+cleanCloudinaryImageWorker.start();
 
 const PORT = process.env.PORT || 8080;
 app.listen(PORT, () => {
