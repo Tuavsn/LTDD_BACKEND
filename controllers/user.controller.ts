@@ -21,6 +21,7 @@ class UserController {
         }
     }
 
+    // Bài tập A03
     static async updateProfile(req: Request, res: Response) {
         try {
             const { email, fullname, avatar, password, oldPassword } = req.body;
