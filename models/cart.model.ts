@@ -1,19 +1,19 @@
 import { model, Schema } from "mongoose";
 
-const cartSchema = new Schema ({
+const cartSchema = new Schema({
     items: {
-        type: Array,
-        required: [true, "Items is required"],
+        type: [{ type: Schema.Types.ObjectId, ref: 'Product' }],
         default: []
     },
     items_count: {
-        type: Number,
-        default: 0
+        type: [{ type: Number }],
+        default: []
     },
     user: {
         type: Schema.Types.ObjectId,
         ref: 'User',
-        required: [true, "User is required"]
+        required: [true, "User is required"],
+        unique: true
     },
     state: {
         type: String,

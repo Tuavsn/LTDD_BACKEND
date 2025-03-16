@@ -6,6 +6,7 @@ import UserRouter from './user.route';
 import AuthRouter from './auth.route';
 import ProductRouter from './product.route';
 import CategoryRouter from './category.route';
+import CartRouter from './cart.route';
 
 const api = express.Router();
 
@@ -17,6 +18,7 @@ api.use('/auth', AuthRouter)
     .use('/upload', uploadRouter)
     .use('/user', UserRouter)
     .use('/product', ProductRouter)
-    .use('/category', CategoryRouter);
+    .use('/category', CategoryRouter)
+    .use('/cart', CartRouter);
 
 export default api;
