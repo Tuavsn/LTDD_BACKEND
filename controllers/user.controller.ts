@@ -5,88 +5,99 @@ import User from '../models/user.model';
 import transporter from '../configs/mail';
 import { IUser } from '../configs/types';
 import { TokenPayload } from './auth.controller';
+import { Types } from 'mongoose';
 
 class UserController {
-    static async getUserInfo(req: Request, res: Response) {
-        console.log('Get user info', req.user)
-        const user = await User.findOne({_id: (req.user as TokenPayload).id})
-        console.log("user"+user);
-        return res.json({message:"Get user info successfully", user})
+
+    static async getProfile(req: Request, res: Response) {
+        try {
+            const user = req.user as TokenPayload;
+            const foundUser = await User.findById(user.id).select('-password');
+
+            return res.status(200).json({ user: foundUser, message: 'Profile retrieved successfully.' });
+        } catch (err) {
+            console.error(err);
+            return res.status(500).json({ message: 'Failed to get profile' });
+        }
     }
+
     // Bài tập A03
     static async updateProfile(req: Request, res: Response) {
-        const { email, fullname, avatar, password } = req.body;
-        const savedUser = req.user as TokenPayload;
-
         try {
-            // Tìm người dùng bằng email được giải mã bằng token
-            const user = await User.findOne({ id: savedUser.id });
+            const { email, fullname, avatar, password, oldPassword } = req.body;
+            const savedUser = req.user as TokenPayload;
 
-            // Kiểm tra xem người dùng có tồn tại không
-            if (!user) {
-                return res.status(404).json({ message: 'User not found' });
-            }
-            // Kiểm tra xem id người dùng có khớp với id được giải mã từ token không (token trước và sau khi thay đổi email)
-            if (savedUser?.id.toString() !== user._id.toString()) {
-                return res.status(403).json({ message: 'Forbidden' });
-            }
+            const user = await User.findOne({ email: savedUser.email });
+            if (!user) return res.status(404).json({ message: 'User not found' });
+            if (savedUser?.id.toString() !== user._id.toString()) return res.status(403).json({ message: 'Forbidden' });
 
-            // Tạo một đối tượng chứa dữ liệu cần cập nhật
+            if (email || password)
+                if (oldPassword) {
+                    const isMatch = await bcrypt.compare(oldPassword, user.password);
+                    if (!isMatch) return res.status(400).json({ message: 'Old password is incorrect' });
+                } else {
+                    return res.status(400).json({ message: 'Old password is required to update email or password' });
+                }
+
             const updateData: Partial<IUser> = {};
             if (fullname) updateData.fullname = fullname;
             if (avatar) updateData.avatar = avatar;
 
-            // Kiểm tra có cập nhật mật khẩu không
             if (password) {
                 if (password.length < 8 || password.length > 30) {
                     return res.status(400).json({ message: 'Password must be between 8 and 30 characters.' });
                 }
-                const hashedPassword = await bcrypt.hash(password, 10);
-                updateData.password = hashedPassword;
+                updateData.password = await bcrypt.hash(password, 10);
             }
 
-            // Kiểm tra coi có cập nhật email không
             if (email && email !== user.email) {
-                console.log('email changing')
-                // tạo otp
-                const otp = crypto.randomInt(100000, 999999).toString();
-                const otpExpiration = new Date(Date.now() + 15 * 60 * 1000); // OTP last in 15 minutes
 
-                // lưu otp và các trường đang chờ cập nhật
-                await User.findByIdAndUpdate(savedUser?.id, {
-                    pendingEmail: email,
-                    otp,
-                    otpExpiration,
-                    ...updateData
-                });
+                const existingUser = await User.findOne({ email });
+                if (existingUser)
+                    return res.status(400).json({ message: 'Email already exists' });
 
-                console.log('OTP for email update:', otp);
-
-                // gửi otp qua email
-                const mailOptions = {
-                    from: process.env.SMTP_USER,
-                    to: email,
-                    subject: 'OTP for Email Update',
-                    html: `<p>Your OTP for email update is <b>${otp}</b>. This OTP will expire in 15 minutes.</p>`
-                };
-
-                transporter.sendMail(mailOptions, (err: any) => {
-                    if (err) {
-                        console.error(err);
-                        return res.status(500).json({ message: 'Failed to send OTP email for email update' });
-                    }
-                    return res.status(200).json({ changeEmail: true, message: 'OTP sent to the new email. Please verify to complete the update.' });
-                });
+                await UserController.handleEmailUpdate(email, savedUser.id, updateData, res);
+                return res.status(200).json({ changeEmail: true, message: 'Processing email update. Please verify the OTP sent to the new email.' });
             } else {
-                // trường hợp không cần thay đổi email 
-                console.log('tes')
-                await User.findOneAndUpdate({ email: user.email }, { $set: { ...updateData } }, { new: true });
-                console.log('tes1')
+
+                if (Object.keys(updateData).length === 0) {
+                    return res.status(400).json({ message: 'No data to update' });
+                }
+
+                await User.findByIdAndUpdate(user._id, { $set: updateData }, { new: true });
                 return res.status(200).json({ changeEmail: false, message: 'Profile updated successfully.' });
             }
         } catch (err) {
             console.error(err);
             return res.status(500).json({ message: 'Failed to update profile' });
+        }
+    }
+
+    private static async handleEmailUpdate(email: string, userId: Types.ObjectId, updateData: Partial<IUser>, res: Response) {
+        try {
+            const otp = crypto.randomInt(100000, 999999).toString();
+            const otpExpiration = new Date(Date.now() + 15 * 60 * 1000);
+
+            await User.findByIdAndUpdate(userId, { pendingEmail: email, otp, otpExpiration, ...updateData });
+            console.log('OTP for email update:', otp);
+
+            const mailOptions = {
+                from: process.env.SMTP_USER,
+                to: email,
+                subject: 'OTP for Email Update',
+                html: `<p>Your OTP for email update is <b>${otp}</b>. This OTP will expire in 15 minutes.</p>`
+            };
+
+            transporter.sendMail(mailOptions, (err: any) => {
+                if (err) {
+                    console.error(err);
+                    return res.status(500).json({ message: 'Failed to send OTP email for email update' });
+                }
+                return res.status(200).json({ changeEmail: true, message: 'OTP sent to the new email. Please verify to complete the update.' });
+            });
+        } catch (error) {
+            console.error(error);
+            return res.status(500).json({ message: 'Failed to process email update' });
         }
     }
 }
