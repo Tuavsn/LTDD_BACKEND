@@ -7,6 +7,12 @@ import { IUser } from '../configs/types';
 import { TokenPayload } from './auth.controller';
 
 class UserController {
+    static async getUserInfo(req: Request, res: Response) {
+        console.log('Get user info', req.user)
+        const user = await User.findOne({_id: (req.user as TokenPayload).id})
+        console.log("user"+user);
+        return res.json({message:"Get user info successfully", user})
+    }
     // Bài tập A03
     static async updateProfile(req: Request, res: Response) {
         const { email, fullname, avatar, password } = req.body;
@@ -14,7 +20,7 @@ class UserController {
 
         try {
             // Tìm người dùng bằng email được giải mã bằng token
-            const user = await User.findOne({ email: savedUser.email });
+            const user = await User.findOne({ id: savedUser.id });
 
             // Kiểm tra xem người dùng có tồn tại không
             if (!user) {
@@ -41,6 +47,7 @@ class UserController {
 
             // Kiểm tra coi có cập nhật email không
             if (email && email !== user.email) {
+                console.log('email changing')
                 // tạo otp
                 const otp = crypto.randomInt(100000, 999999).toString();
                 const otpExpiration = new Date(Date.now() + 15 * 60 * 1000); // OTP last in 15 minutes
@@ -72,7 +79,9 @@ class UserController {
                 });
             } else {
                 // trường hợp không cần thay đổi email 
+                console.log('tes')
                 await User.findOneAndUpdate({ email: user.email }, { $set: { ...updateData } }, { new: true });
+                console.log('tes1')
                 return res.status(200).json({ changeEmail: false, message: 'Profile updated successfully.' });
             }
         } catch (err) {

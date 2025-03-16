@@ -284,10 +284,6 @@ class AuthController {
             return res.status(403).json({ message: 'OTP not verified. Please verify OTP first.' });
         }
 
-        if (!user.otpExpiration || new Date() > user.otpExpiration) {
-            return res.status(403).json({ message: 'OTP has expired' });
-        }
-
         // Hash mật khẩu mới
         const hashedPassword = await bcrypt.hash(newPassword, 10);
 

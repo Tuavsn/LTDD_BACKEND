@@ -9,4 +9,8 @@ UserRouter.post("/profile", (req: Request, res: Response) => {
     Logger.warn("Update profile");
 })
 
+UserRouter.get("/info", (req: Request, res: Response)=> {
+    UserController.getUserInfo (req,res);
+})
+
 export default UserRouter;

@@ -9,6 +9,10 @@ ProductRouter.get("/", (req: Request, res: Response) => {
     Logger.warn("Get all product");
 })
 
+ProductRouter.get("/search", (req: Request, res: Response) => {
+    ProductController.search(req, res);
+    Logger.warn("Search product");
+});
 
 ProductRouter.get("/best-seller", (req: Request, res: Response) => {
     ProductController.getBestSeller(req, res);
