@@ -7,7 +7,7 @@ import { Logger } from "../utils/logger";
 export const authenticationMiddleware = (req: Request, res: Response, next: NextFunction): void => {
   const authroization = req.header("Authorization");
 
-  const openRoutes = ["/auth/", "/category", "/product"];
+  const openRoutes = ["/auth/", "/category", "/product", "/cart"];
   // Nếu request thuộc các openRoutes, trả về ngay để không tiếp tục xử lý middleware
   if (openRoutes.some((route) => req.path.includes(route))) {
     return next();

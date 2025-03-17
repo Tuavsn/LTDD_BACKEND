@@ -40,11 +40,7 @@ class crudController {
             if (!existedItem) {
                 return res.status(404).json({ message: 'Item not found' });
             }
-            res.json(new BaseResponse(
-                200,
-                existedItem,
-                'Get by id success'
-            ));
+            res.status(200).json(existedItem);
         } catch (error: any) {
             res.status(500).json({ message: "Internal Server Error" });
             Logger.error(`Error execute getAll with Request: {GET} ${req.url}`);

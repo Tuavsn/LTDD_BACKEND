@@ -12,8 +12,8 @@ class ProductController extends crudController {
      * Lấy tất cả sản phẩm với các bộ lọc
      * Các tham số query hỗ trợ:
      * - category: ID của danh mục sản phẩm
-     * - minPrice: giá tối thiểu
-     * - maxPrice: giá tối đa
+     * - sortBy: tiêu chí sắp xếp (price hoặc soldCount)
+     * - order: thứ tự sắp xếp (asc hoặc desc)
      * @route {GET} /api/v1/product
      * @param req Express Request object
      * @param res Express Response object
@@ -21,25 +21,21 @@ class ProductController extends crudController {
      */
     getAll = async (req: Request, res: Response) => {
         try {
-            const { category, minPrice, maxPrice } = req.query;
+            const { category, sortBy, order } = req.query;
             const filter: any = {};
 
             if (category) {
                 filter.category = category;
             }
 
-            if (minPrice || maxPrice) {
-                filter.price = {};
-                if (minPrice) {
-                    filter.price.$gte = Number(minPrice);
-                }
-                if (maxPrice) {
-                    filter.price.$lte = Number(maxPrice);
-                }
+            const sortCriteria: any = {};
+            if (sortBy && (sortBy === 'price' || sortBy === 'soldCount')) {
+                sortCriteria[sortBy] = order === 'asc' ? 1 : -1;
             }
 
             const products = await this.model.find(filter)
                 .populate('category')
+                .sort(sortCriteria)
                 .lean();
 
             res.status(200).json(products);

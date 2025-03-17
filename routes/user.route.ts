@@ -12,8 +12,4 @@ UserRouter.get("/me", (req: Request, res: Response) => {
     UserController.getProfile(req, res);
 })
 
-UserRouter.get("/info", (req: Request, res: Response)=> {
-    UserController.getUserInfo (req,res);
-})
-
 export default UserRouter;
