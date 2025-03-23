@@ -3,6 +3,10 @@ import { model, Schema } from "mongoose";
 import { Role } from '../configs/enum';
 
 const userSchema = new Schema({
+    orders: {
+        type: [{ type: Schema.Types.ObjectId, ref: "Order" }],
+        default: []
+    },
     email: {
         type: String,
         required: [true, "Email is required"],
@@ -26,6 +30,17 @@ const userSchema = new Schema({
     avatar: {
         type: String
     },
+    address: [{
+        address: {
+            type: String,
+            min: [8, "Address must be at least 8 characters"],
+            max: [100, "Address must be at most 100 characters"],
+        },
+        isPrimary: {
+            type: Boolean,
+            default: false
+        }
+    }],
     role: {
         type: String,
         enum: [Role.ADMIN, Role.USER],
@@ -56,17 +71,6 @@ const userSchema = new Schema({
         required: false
     },
 }, { timestamps: true });
-
-userSchema.pre("save", function (next) {
-    var user = this;
-    bcrypt.hash(user.password, 10, (err, hash) => {
-        if (err) {
-            return next(err);
-        }
-        user.password = hash;
-        next();
-    })
-})
 
 const User = model("User", userSchema);
 

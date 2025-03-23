@@ -7,7 +7,8 @@ import { Logger } from './utils/logger';
 import { authenticationMiddleware } from './middlewares/authenciation.middlewares';
 
 import { v2 as cloudinary } from 'cloudinary';
-import { cleanCloudinaryImageWorker } from './worker/CleanCloudinaryImage';
+import { backgroundWorker } from './worker/backgroundWorker';
+import { resetQueue } from './worker/autoApproveOrderQueue';
 
 // Configuration
 cloudinary.config({
@@ -30,7 +31,6 @@ app.use(express.json({ limit: '100mb' }));
 app.use(express.urlencoded({ extended: true }));
 const middle = (req: Request, res: Response, next: any) => {
   console.log('Middleware:', req.method, req.url);
-  console.log(req.headers);
   next();
 }
 
@@ -45,7 +45,8 @@ app.get('/', (req: Request, res: Response) => {
   res.json({ status: '>>> API is running' });
 })
 
-cleanCloudinaryImageWorker.start();
+backgroundWorker.start();
+backgroundWorker.startInitialTasks();
 
 const PORT = process.env.PORT || 8080;
 app.listen(PORT, () => {

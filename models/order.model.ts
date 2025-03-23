@@ -1,28 +1,53 @@
 import { model, Schema } from "mongoose";
 
-const cartSchema = new Schema ({
+export enum OrderState {
+    NEW = "new",
+    ACCEPTED = "accepted",
+    PENDING = "pending",
+    DELIVERING = "delivering",
+    DELIVERED = "delivered",
+    CANCELED = "canceled"
+}
+
+const orderSchema = new Schema({
     items: {
-        type: Array,
+        type: [{ type: Schema.Types.ObjectId, ref: 'Product' }],
         required: [true, "Items is required"],
         default: []
     },
     items_count: {
-        type: Number,
-        default: 0
+        type: [{ type: Number }],
+        required: [true, "Items count is required"],
+        default: []
     },
     user: {
         type: Schema.Types.ObjectId,
         ref: 'User',
         required: [true, "User is required"]
     },
+    phone: {
+        type: String,
+        required: [true, "Phone is required"]
+    },
+    address: {
+        type: String,
+        required: [true, "Address is required"]
+    },
+    paymentMethod: {
+        type: String,
+        required: [true, "Payment method is required"],
+        enum: ["cash", "card", "paypal"],
+        default: "cash"
+    },
     state: {
         type: String,
-        required: [true, "Cart state is required"],
-        enum: ["active", "completed", "cancelled", "pending"],
-        default: "active"
+        required: [true, "Order state is required"],
+        enum: OrderState,
+        default: OrderState.NEW
     }
 }, { timestamps: true });
 
-const Cart = model("Cart", cartSchema);
 
-export default Cart;
+const Order = model("Order", orderSchema);
+
+export default Order;

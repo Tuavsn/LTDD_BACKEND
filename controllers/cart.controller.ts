@@ -1,8 +1,62 @@
 import { Request, Response } from "express";
 import Cart from "../models/cart.model";
 import { Logger } from "../utils/logger";
+import Order from "../models/order.model";
+import User from "../models/user.model";
+import { TokenPayload } from "./auth.controller";
+import { addOrder } from "../worker/autoApproveOrderQueue";
 
 class CartController {
+
+  /**
+   * thanh toán giỏ hàng
+   * @route {POST} /api/v1/cart/checkout
+   * @body { userId, address, phone, note }
+   * @return cart
+   * @return order
+   */
+  async checkout(req: Request, res: Response) {
+    try {
+      const { address, phone, note, paymentMethod } = req.body;
+      const userId = (req.user as TokenPayload).id;
+      const cart = await Cart.findOne({ user: userId });
+      if (!cart) {
+        return res.status(404).json({ message: "Cart not found" });
+      }
+      // Tạo đơn hàng mới từ giỏ hàng
+      const order = new Order({
+        user: userId,
+        items: cart.items,
+        items_count: cart.items_count,
+        address,
+        phone,
+        note,
+        paymentMethod,
+      });
+      await order.save();
+      // Thêm đơn hàng vào danh sách hàng đợi tự động duyệt đơn hàng
+      await addOrder(order);
+
+      // Xóa giỏ hàng sau khi đã thanh toán
+      cart.items = [];
+      cart.items_count = [];
+      await cart.save();
+
+      // Lưu địa chỉ mới vào danh sách địa chỉ của người dùng nếu chưa có trong danh sách
+      const user = await User.findById(userId);
+      if (user && !user.address.includes(address)) {
+        user.address.forEach((a) => (a.isPrimary = false));
+        user.address.push({ address, isPrimary: true });
+        await user.save();
+      }
+
+      res.status(200).json({ cart });
+    } catch (error: any) {
+      Logger.error(`Error in checkout: ${error}`);
+      res.status(500).json({ message: "Internal Server Error" });
+    }
+  }
+
   /**
    * Lấy giỏ hàng của người dùng dựa trên userId (truyền qua req.params)
    * @route {GET} /api/v1/cart/:userId
@@ -14,7 +68,9 @@ class CartController {
         .populate("items")
         .lean();
       if (!cart) {
-        return res.status(404).json({ message: "Cart not found" });
+        const cart = new Cart({ user: userId, items: [], items_count: [] });
+        await cart.save();
+        return res.status(200).json(cart);
       }
       // Ghép mảng items và items_count thành một mảng chứa đối tượng { product, quantity }
       const combinedItems = cart.items.map((item: any, index: number) => ({

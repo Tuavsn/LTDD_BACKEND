@@ -26,6 +26,7 @@ class UserController {
         try {
             const { email, fullname, avatar, password, oldPassword } = req.body;
             const savedUser = req.user as TokenPayload;
+            console.log('req.body', req.body)
 
             const user = await User.findOne({ email: savedUser.email });
             if (!user) return res.status(404).json({ message: 'User not found' });

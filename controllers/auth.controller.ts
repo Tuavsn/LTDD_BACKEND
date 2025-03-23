@@ -8,6 +8,7 @@ import transporter from '../configs/mail';
 import { IUser } from '../configs/types';
 import { Role } from '../configs/enum';
 import { Types } from 'mongoose';
+import { Logger } from '../utils/logger';
 
 export type TokenPayload = {
     id: Types.ObjectId;
@@ -29,12 +30,15 @@ class AuthController {
             // Tìm người dùng trong cơ sở dữ liệu
             const user = await User.findOne({ email });
             if (!user) {
+                Logger.error(`User not found: ${email}`);
                 return res.status(404).json({ message: 'Invalid credentials' });
             }
 
             // Kiểm tra mật khẩu
             const isPasswordValid = await bcrypt.compare(password, user.password);
+            Logger.info(`Password: ${password}, Hashed: ${await bcrypt.hash(password, 10)}, userPassword: ${user.password}`);
             if (!isPasswordValid) {
+                Logger.error(`Invalid password: ${email}`);
                 return res.status(404).json({ message: 'Invalid credentials' });
             }
 
@@ -77,9 +81,6 @@ class AuthController {
     static async register(req: Request, res: Response) {
         const { email, phone, fullname, password }:
             { email: string, phone: string, fullname: string, role: string, password: string } = req.body;
-
-        console.log(req.body)
-
         // Kiểm tra người dùng đã tồn tại
         const existingUser = await User.findOne({ email });
         if (existingUser && existingUser.isVerified) {
@@ -91,7 +92,6 @@ class AuthController {
 
         // Lưu thông tin người dùng cùng với OTP và thời gian hết hạn
         const otpExpiration = new Date(Date.now() + 15 * 60 * 1000); // OTP có hiệu lực trong 15 phút
-        console.log(password)
         const hashedPassword = await bcrypt.hash(password, 10);
 
         if (existingUser) {
@@ -100,17 +100,14 @@ class AuthController {
                 { $set: { password: hashedPassword, phone, fullname } },
                 { new: true }
             );
-            console.log('1')
         } else {
             await User.create({
-                email, phone, fullname, role: Role.USER, password, otp, otpExpiration
+                email, phone, fullname, role: Role.USER, password: hashedPassword, otp, otpExpiration
             });
-            console.log('2')
         }
 
         if (!existingUser || (existingUser.otpExpiration && existingUser.otpExpiration < new Date())) {
             // Gửi email chứa mã OTP
-            console.log('3')
             const mailOptions = {
                 from: process.env.SMTP_USER,
                 to: email,
@@ -158,19 +155,26 @@ class AuthController {
             });
         }
 
-        if (user.isVerified && user.pendingEmail) {
+        if (user.isVerified) {
+            // Đã xác minh: Cập nhật email mới và xóa trạng thái OTP
+            if (user.pendingEmail) {
+                await User.findOneAndUpdate(
+                    { _id: user.id },
+                    { $set: { email: user.pendingEmail, pendingEmail: null } }
+                );
+                return res.status(200).json({ message: 'Email updated successfully' });
+            } else {
+                // Nếu không phải là xác minh email, thì là xác minh OTP cho việc đặt lại mật khẩu
+                return res.status(200).json({ message: 'OTP verification for password reset successful' });
+            }
+        } else {
+            // Hoàn tất đăng ký: Xóa OTP và hoàn tất quá trình đăng ký
             await User.findOneAndUpdate(
-                { _id: user.id },
-                { $set: { email: user.pendingEmail, pendingEmail: null } }
+                { email: user.email },
+                { $set: { otp: null, otpExpiration: null, isVerified: true } },
+                { new: true } // Trả về document đã cập nhật
             );
         }
-
-        // Hoàn tất đăng ký: Xóa OTP và hoàn tất quá trình đăng ký
-        await User.findOneAndUpdate(
-            { email: user.email },
-            { $set: { otp: null, otpExpiration: null, isVerified: true } },
-            { new: true } // Trả về document đã cập nhật
-        );
 
         res.status(200).json({ message: 'Registration successful' });
     }

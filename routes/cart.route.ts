@@ -38,4 +38,9 @@ CartRouter.post("/clear", (req: Request, res: Response) => {
   Logger.warn("Clear cart for user");
 });
 
+CartRouter.post("/checkout", (req: Request, res: Response) => {
+  CartController.checkout(req, res);
+  Logger.warn("Checkout cart");
+});
+
 export default CartRouter;
