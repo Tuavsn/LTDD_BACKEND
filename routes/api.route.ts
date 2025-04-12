@@ -6,6 +6,7 @@ import ProductRouter from './product.route';
 import CategoryRouter from './category.route';
 import CartRouter from './cart.route';
 import OrderRouter from './order.route';
+import DiscountRouter from './discount.route';
 
 const api = express.Router();
 
@@ -19,8 +20,9 @@ api.use('/auth', AuthRouter)
     .use('/product', ProductRouter)
     .use('/category', CategoryRouter)
     .use('/cart', CartRouter)
-    .use('/order', OrderRouter);
+    .use('/order', OrderRouter)
+    .use('/discount', DiscountRouter)
 
-export const openRoutes = ["/auth/", "/category", "/product"];
+export const openRoutes = ["/auth/", "/category", "/product", "/discount"];
 
 export default api;

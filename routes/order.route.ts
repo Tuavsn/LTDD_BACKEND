@@ -13,6 +13,11 @@ router.get('/', async (req: Request, res: Response) => {
 }
 );
 
+router.post('/checkout', async (req: Request, res: Response) => {
+  OrderController.createOrder(req, res);
+  Logger.info(`POST /order`);
+});
+
 router.put('/cancel/:id', async (req: Request, res: Response) => {
   OrderController.cancelOrder(req, res);
   Logger.info(`PUT /order/cancel/${req.params.id}`);

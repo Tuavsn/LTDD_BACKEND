@@ -48,7 +48,11 @@ const orderSchema = new Schema({
         required: [true, "Order state is required"],
         enum: OrderState,
         default: OrderState.NEW
-    }
+    },
+    discount: {
+        type: Schema.Types.ObjectId,
+        ref: 'Discount'
+    },
 }, { timestamps: true });
 
 

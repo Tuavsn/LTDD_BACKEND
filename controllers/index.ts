@@ -3,6 +3,7 @@ import UserController from './user.controller';
 import UploadController from './upload.controller';
 import CartController from './cart.controller';
 import OrderController from './order.controller';
+import DiscountController from './discount.controller';
 
 export {
   AuthController,
@@ -10,4 +11,5 @@ export {
   UploadController,
   CartController,
   OrderController,
+  DiscountController,
 }
