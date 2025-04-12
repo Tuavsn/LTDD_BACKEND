@@ -19,7 +19,7 @@ class CartController {
     try {
       const { address, phone, note, paymentMethod } = req.body;
       const userId = (req.user as TokenPayload).id;
-      const cart = await Cart.findOne({ user: userId });
+      const cart = await Cart.findOne({ user: userId }).populate("items");
       if (!cart) {
         return res.status(404).json({ message: "Cart not found" });
       }
@@ -32,6 +32,9 @@ class CartController {
         phone,
         note,
         paymentMethod,
+        totalPrice: cart.items.reduce((total: number, item: any, index: number) => {
+          return total + item.price * (cart.items_count[index] || 0);
+        }, 0)
       });
       await order.save();
       // Thêm đơn hàng vào danh sách hàng đợi tự động duyệt đơn hàng

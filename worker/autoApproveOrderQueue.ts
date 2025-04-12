@@ -37,22 +37,41 @@ async function setOrderIds(orderIds: string[]) {
 }
 
 async function checkAndApproveOrder() {
-  const orderIds = await getOrderIds();
-  console.log(`[${new Date().toISOString()}] Checking and approving ${orderIds.length} orders`);
+  let orderIds = await getOrderIds();
+  Logger.info(`Checking and approving ${orderIds.length} orders`);
 
   for (const orderId of orderIds) {
     const order = await getOrder(orderId);
 
     if (!order) {
+      Logger.info(`Order ${orderId} not found in Redis`);
+      orderIds = orderIds.filter((id) => id !== orderId);
       continue;
     }
 
-    Logger.info(`Checking order ${orderId}, ttl: ${order.ttl}`);
+    const orderModel = await Order.findById(orderId);
+
+    if (!orderModel) {
+      await client.del(orderId);
+      Logger.info(`Order ${orderId} not found in database`);
+      orderIds = orderIds.filter((id) => id !== orderId);
+      continue;
+    }
+
+    if (orderModel.state === OrderState.CANCELED) {
+      Logger.info(`Order ${orderId} is canceled`);
+      await client.del(orderId);
+      orderIds = orderIds.filter((id) => id !== orderId);
+      continue;
+    }
 
     if (order.ttl > 0 && order.ttl <= 60 * 2) {
-      approveOrder(orderId);
+      await approveOrder(orderId);
     }
   }
+
+  await client.set(QUEUE_KEY, JSON.stringify(orderIds));
+  Logger.info(`Updated order IDs in queue: ${orderIds}`);
 
   const orderIdsRemaining = JSON.parse(await client.get(QUEUE_KEY) ?? "[]");
   if (orderIdsRemaining.length === 0) {

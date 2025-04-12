@@ -39,6 +39,10 @@ const orderSchema = new Schema({
         enum: ["cash", "card", "paypal"],
         default: "cash"
     },
+    totalPrice: {
+        type: Number,
+        required: [true, "Total price is required"]
+    },
     state: {
         type: String,
         required: [true, "Order state is required"],

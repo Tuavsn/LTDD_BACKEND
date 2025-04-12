@@ -1,6 +1,6 @@
 import { model, Schema } from "mongoose";
 
-const productSchema = new Schema ({
+const productSchema = new Schema({
     name: {
         type: String,
         required: [true, "Product name is required"],
@@ -32,10 +32,10 @@ const productSchema = new Schema ({
         default: 0,
         set: (value: number) => Math.round(value * 10) / 10,
         min: [0, "Product rating must be at least 0"],
-        max: [5, "Product rating must be at most 5"], 
+        max: [5, "Product rating must be at most 5"],
     },
-    soldCount: { 
-        type: Number, 
+    soldCount: {
+        type: Number,
     },
 }, { timestamps: true });
 
