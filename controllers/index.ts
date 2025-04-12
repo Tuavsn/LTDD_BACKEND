@@ -4,6 +4,7 @@ import UploadController from './upload.controller';
 import CartController from './cart.controller';
 import OrderController from './order.controller';
 import DiscountController from './discount.controller';
+import reviewController from './review.controller';
 
 export {
   AuthController,
@@ -12,4 +13,5 @@ export {
   CartController,
   OrderController,
   DiscountController,
+  reviewController
 }

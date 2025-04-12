@@ -39,4 +39,14 @@ ProductRouter.delete("/:id", (req: Request, res: Response) => {
     Logger.warn(`Delete product with id: ${req.params.id}`);
 })
 
+ProductRouter.get("/:id/rating-stats", (req: Request, res: Response) => {
+    ProductController.getRatingStats(req, res);
+    Logger.warn(`Get rating stats for product with id: ${req.params.id}`);
+});
+
+ProductRouter.get("/:id/similar", (req: Request, res: Response) => {
+    ProductController.getSimilarProducts(req, res);
+    Logger.warn(`Get similar products for product with id: ${req.params.id}`);
+});
+
 export default ProductRouter;

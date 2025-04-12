@@ -1,6 +1,10 @@
 import { model, Schema } from "mongoose";
 
 const productSchema = new Schema({
+    discounts: {
+        type: [{ type: Schema.Types.ObjectId, ref: 'Discount' }],
+        default: [],
+    },
     name: {
         type: String,
         required: [true, "Product name is required"],
@@ -36,8 +40,31 @@ const productSchema = new Schema({
     },
     soldCount: {
         type: Number,
+        default: 0
     },
+    reviewCount: {
+        type: Number,
+        default: 0
+    },
+    ratingCounts: {
+        5: { type: Number, default: 0 },
+        4: { type: Number, default: 0 },
+        3: { type: Number, default: 0 },
+        2: { type: Number, default: 0 },
+        1: { type: Number, default: 0 }
+    }
 }, { timestamps: true });
+
+// Virtual for getting reviews
+productSchema.virtual('reviews', {
+    ref: 'Review',
+    localField: '_id',
+    foreignField: 'productId'
+});
+
+// Set virtuals to true in toJSON
+productSchema.set('toJSON', { virtuals: true });
+productSchema.set('toObject', { virtuals: true });
 
 const Product = model("Product", productSchema);
 
