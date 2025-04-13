@@ -6,6 +6,8 @@ import OrderController from './order.controller';
 import DiscountController from './discount.controller';
 import reviewController from './review.controller';
 
+export * from './admin'
+
 export {
   AuthController,
   UserController,

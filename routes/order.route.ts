@@ -1,6 +1,6 @@
 // router.ts
 import express, { Request, Response } from 'express';
-import { OrderController } from '../controllers';
+import { OrderController, AdminOrderController } from '../controllers';
 import Order from '../models/order.model';
 import { Logger } from '../utils/logger';
 const router = express.Router();
@@ -21,6 +21,11 @@ router.post('/checkout', async (req: Request, res: Response) => {
 router.put('/cancel/:id', async (req: Request, res: Response) => {
   OrderController.cancelOrder(req, res);
   Logger.info(`PUT /order/cancel/${req.params.id}`);
+});
+
+router.put('/admin/change-status/:id', async (req: Request, res: Response) => {
+  AdminOrderController.changeOrderStatus(req, res);
+  Logger.info(`PUT /order/admin/change-status/${req.params.id}`);
 });
 
 export default router;

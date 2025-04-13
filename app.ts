@@ -1,5 +1,4 @@
 import express, { Express, Request, Response } from 'express'
-import dotenv from 'dotenv'
 import cors from 'cors'
 import ApiRouter from './routes/api.route';
 import { connectDB } from './configs/db';
@@ -8,7 +7,9 @@ import { authenticationMiddleware } from './middlewares/authenciation.middleware
 
 import { v2 as cloudinary } from 'cloudinary';
 import { backgroundWorker } from './worker/backgroundWorker';
-import { resetQueue } from './worker/autoApproveOrderQueue';
+import initNotificationHandler from './sockets/notification';
+import NotificationHandler from './sockets/notification';
+// import { resetQueue } from './worker/autoApproveOrderQueue';
 
 // Configuration
 cloudinary.config({
@@ -47,6 +48,9 @@ app.get('/', (req: Request, res: Response) => {
 
 backgroundWorker.start();
 backgroundWorker.startInitialTasks();
+
+const notificationSocketServer = NotificationHandler.getInstance(app);
+notificationSocketServer.init();
 
 const PORT = process.env.PORT || 8080;
 app.listen(PORT, () => {

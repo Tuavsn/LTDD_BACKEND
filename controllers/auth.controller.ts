@@ -36,7 +36,6 @@ class AuthController {
 
             // Kiểm tra mật khẩu
             const isPasswordValid = await bcrypt.compare(password, user.password);
-            Logger.info(`Password: ${password}, Hashed: ${await bcrypt.hash(password, 10)}, userPassword: ${user.password}`);
             if (!isPasswordValid) {
                 Logger.error(`Invalid password: ${email}`);
                 return res.status(404).json({ message: 'Invalid credentials' });
@@ -58,7 +57,7 @@ class AuthController {
                 message: 'Login successful',
                 token,
                 user: {
-                    id: user._id,
+                    _id: user._id,
                     email: user.email,
                     phone: user.phone,
                     fullname: user.fullname,
