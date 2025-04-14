@@ -8,8 +8,24 @@ class OrderController {
   async getOrders(req: Request, res: Response) {
     try {
       const userId = (req.user as TokenPayload).id;
-      const orders = await Order.find({ user: userId }).populate("items");
-      res.status(200).json({ orders });
+      const orders = await Order.find({ user: userId }).populate(["items", "discount"]);
+
+      if (!orders) {
+        return res.status(404).json({ message: "No orders found" });
+      }
+
+      const sortedOrders = orders.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+      const specializedOrders = sortedOrders.map((order) => {
+        const items = order.items.map((item: any) => {
+          return {
+            product: item,
+            quantity: order.items_count[order.items.indexOf(item)],
+          };
+        });
+        return { ...order.toObject(), items, items_count: undefined };
+      })
+
+      res.status(200).json({ orders: specializedOrders });
     } catch (error: any) {
       Logger.error(`Error in getOrders: ${error}`);
       res.status(500).json({ message: "Internal Server Error" });
@@ -62,6 +78,10 @@ class OrderController {
       }
 
       const discount = discountCode ? await Discount.findOne({ code: discountCode }) : null;
+
+      if (discount && discount.expiration_date < new Date()) {
+        return res.status(400).json({ message: "Discount code expired" });
+      }
 
       const totalPrice = cartItems.reduce((total: number, item: any) => total + item.product.price * item.quantity, 0);
       const orderData = {

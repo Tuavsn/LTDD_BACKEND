@@ -5,6 +5,8 @@ import Order from "../models/order.model";
 import User from "../models/user.model";
 import { TokenPayload } from "./auth.controller";
 import { addOrder } from "../worker/autoApproveOrderQueue";
+import Discount from "../models/discount.model";
+import Product from "../models/product.model";
 
 class CartController {
 
@@ -17,12 +19,37 @@ class CartController {
    */
   async checkout(req: Request, res: Response) {
     try {
-      const { address, phone, note, paymentMethod } = req.body;
+      const { address, phone, note, paymentMethod, discountCode } = req.body;
       const userId = (req.user as TokenPayload).id;
       const cart = await Cart.findOne({ user: userId }).populate("items");
       if (!cart) {
         return res.status(404).json({ message: "Cart not found" });
       }
+
+      if (cart.items.length === 0) {
+        return res.status(400).json({ message: "Cart is empty" });
+      }
+      let discount: any = null;
+
+      if (discountCode) {
+        discount = await Discount.findOne({ code: discountCode.toUpperCase() });
+        if (!discount) {
+          return res.status(404).json({ message: "Discount code not found" });
+        }
+        if (discount.expiration_date < new Date()) {
+          return res.status(400).json({ message: "Discount code expired" });
+        }
+      }
+
+      const combineItems = cart.items.map((item: any, index: number) => ({
+        product: item,
+        quantity: cart.items_count[index] || 0,
+      }));
+      const totalPrice = combineItems.reduce((total: number, item: any) => {
+        const productPrice = item.product.price * item.quantity;
+        return total + productPrice;
+      }, 0);
+
       // Tạo đơn hàng mới từ giỏ hàng
       const order = new Order({
         user: userId,
@@ -32,9 +59,8 @@ class CartController {
         phone,
         note,
         paymentMethod,
-        totalPrice: cart.items.reduce((total: number, item: any, index: number) => {
-          return total + item.price * (cart.items_count[index] || 0);
-        }, 0)
+        discount: discount ? discount._id : null,
+        totalPrice: discount ? totalPrice - (totalPrice * discount.percentage / 100) : totalPrice,
       });
       await order.save();
       // Thêm đơn hàng vào danh sách hàng đợi tự động duyệt đơn hàng
