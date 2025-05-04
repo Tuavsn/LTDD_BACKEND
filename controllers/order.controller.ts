@@ -42,6 +42,33 @@ class OrderController {
     }
   }
 
+  async getAllOrderById(req: Request, res: Response) {
+    try {
+      const orderId = req.params.id;
+      const order = await Order
+        .findById(orderId)
+        .populate(["items", "discount", "user"])
+        .lean() as any;
+  
+      if (!order) {
+        return res.status(404).json({ message: "Order not found" });
+      }
+  
+      const itemsWithQty = order.items.map((item: any, idx: number) => ({
+        product:   item,
+        quantity:  order.items_count[idx] ?? 0,
+      }));
+  
+      order.items = itemsWithQty;
+
+      res.status(200).json({ order });
+    } catch (error: any) {
+      Logger.error(`Error in getAllOrderById: ${error}`);
+      res.status(500).json({ message: "Internal Server Error" });
+    }
+  }
+  
+
   async cancelOrder(req: Request, res: Response) {
     try {
       const orderId = req.params.id;

@@ -1,8 +1,14 @@
 import { Request, Response } from "express";
 import { Logger } from "../utils/logger";
 import Discount from "../models/discount.model";
+import crudController from "./common.controller";
 
-class DiscountController {
+class DiscountController extends crudController {
+  
+  constructor() {
+    super(Discount);
+  }
+
   getDiscountByCode = async (req: Request, res: Response) => {
     try {
       const { code } = req.body;

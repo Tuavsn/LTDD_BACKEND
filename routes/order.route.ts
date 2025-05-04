@@ -13,6 +13,16 @@ router.get('/', async (req: Request, res: Response) => {
 }
 );
 
+router.get('/all', async (req: Request, res: Response) => {
+  OrderController.getAllOrders(req, res);
+  Logger.info(`GET /order/all`);
+});
+
+router.get('/:id', async (req: Request, res: Response) => {
+  OrderController.getAllOrderById(req, res);
+  Logger.info(`GET /order/:id`);
+});
+
 router.post('/checkout', async (req: Request, res: Response) => {
   OrderController.createOrder(req, res);
   Logger.info(`POST /order`);
